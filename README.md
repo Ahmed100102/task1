@@ -1,254 +1,85 @@
-# Avancement - lundi 27/09
-## Simulation sur Rviz
-Apres la construction du modele du vehicule a simuler ,  on a essayé de la visualiser dans Rviz pour vérifier le bons fonctionnement les __links__  .
-Pour faire ceci, on a creer un __launch file__ dont le contenu est le suivant
-- la creation du fonction __generate_launch_description()__
-```python
-def generate_launch_description():
-```
-- Definir les chemin  des fichier :
-```python
-  pkg_share = FindPackageShare(package='adavia').find('adavia')
-  default_launch_dir = os.path.join(pkg_share, 'launch')
-  default_model_path = os.path.join(pkg_share, 'models/adavia_bot.xacro')
-  robot_name_in_urdf = 'basic_mobile_bot'
-  default_rviz_config_path = os.path.join(pkg_share, 'rviz/urdf_config.rviz')
-```
-- Definir la configuration de la simulation :
-```python
-  gui = LaunchConfiguration('gui')
-  model = LaunchConfiguration('model')
-  rviz_config_file = LaunchConfiguration('rviz_config_file')
-  use_robot_state_pub = LaunchConfiguration('use_robot_state_pub')
-  use_rviz = LaunchConfiguration('use_rviz')
-  use_sim_time = LaunchConfiguration('use_sim_time')
-```
-- Definir les parametres du __launch__ :
-```python
-  declare_model_path_cmd = DeclareLaunchArgument(
-    name='model', 
-    default_value=default_model_path, 
-    description='Absolute path to robot urdf file')
-    
-  declare_rviz_config_file_cmd = DeclareLaunchArgument(
-    name='rviz_config_file',
-    default_value=default_rviz_config_path,
-    description='Full path to the RVIZ config file to use')
-    
-  declare_use_joint_state_publisher_cmd = DeclareLaunchArgument(
-    name='gui',
-    default_value='True',
-    description='Flag to enable joint_state_publisher_gui')
-  
-  declare_use_robot_state_pub_cmd = DeclareLaunchArgument(
-    name='use_robot_state_pub',
-    default_value='True',
-    description='Whether to start the robot state publisher')
+# Liste d'attente d'impression 3D
+## A propos
+Cette application est crée pou gérer les demandes d'impression 3D pour l'innovation.
+J'ai choisi pour créer cet application d'utiliser la bibliotèque Python Streamlit qui donne la capacité de construire une application web avec un theme moderne rien qu'avec Python.
 
-  declare_use_rviz_cmd = DeclareLaunchArgument(
-    name='use_rviz',
-    default_value='True',
-    description='Whether to start RVIZ')
-    
-  declare_use_sim_time_cmd = DeclareLaunchArgument(
-    name='use_sim_time',
-    default_value='True',
-    description='Use simulation (Gazebo) clock if true')
-```
-- Specifier les __actions__ :
-```python
-  # Publish the joint state values for the non-fixed joints in the URDF file.
-  start_joint_state_publisher_cmd = Node(
-    condition=UnlessCondition(gui),
-    package='joint_state_publisher',
-    executable='joint_state_publisher',
-    name='joint_state_publisher')
+![download](https://github.com/user-attachments/assets/1bcf0dcb-f34b-4efb-be3c-4ee2046b7cf5)
 
-  # A GUI to manipulate the joint state values
-  start_joint_state_publisher_gui_node = Node(
-    condition=IfCondition(gui),
-    package='joint_state_publisher_gui',
-    executable='joint_state_publisher_gui',
-    name='joint_state_publisher_gui')
+## Creation du formulaire 
+On a utiliser les composent standard de Streamlit pour créer les champs du formulaire.
 
-  # Subscribe to the joint states of the robot, and publish the 3D pose of each link.
-  start_robot_state_publisher_cmd = Node(
-    condition=IfCondition(use_robot_state_pub),
-    package='robot_state_publisher',
-    executable='robot_state_publisher',
-    parameters=[{'use_sim_time': use_sim_time, 
-    'robot_description': Command(['xacro ', model])}],
-    arguments=[default_model_path])
+### Installation
 
-  # Launch RViz
-  start_rviz_cmd = Node(
-    condition=IfCondition(use_rviz),
-    package='rviz2',
-    executable='rviz2',
-    name='rviz2',
-    output='screen',
-    arguments=['-d', rviz_config_file])
-  
-  # Create the launch description and populate
-  ld = LaunchDescription()
+pour télecharger la bibliotèque Streamlit on a simplement utiliser la comande ___pip___
 
-  # Declare the launch options
-  ld.add_action(declare_model_path_cmd)
-  ld.add_action(declare_rviz_config_file_cmd)
-  ld.add_action(declare_use_joint_state_publisher_cmd)
-  ld.add_action(declare_use_robot_state_pub_cmd)  
-  ld.add_action(declare_use_rviz_cmd) 
-  ld.add_action(declare_use_sim_time_cmd)
 
-  # Add any actions
-  ld.add_action(start_joint_state_publisher_cmd)
-  ld.add_action(start_joint_state_publisher_gui_node)
-  ld.add_action(start_robot_state_publisher_cmd)
-  ld.add_action(start_rviz_cmd)
-
-  return ld
-```
-pour la visualisation dans Rviz il reste juste d'executer le fichier __launch__ en utilisant la commande suivante :
 ``` bash
-ros2 launch adavia adavia.launch.py
-```
-Ce qui nous donne le resultat suivant :
-
-![Screenshot from 2024-07-29 16-13-47](https://github.com/user-attachments/assets/3bbadd37-1192-4b70-8405-a5906d41f81e)
-
-## Simulation sur Gazbo :
-### Choix du version:
-D'abord on doit choisir une version de Gazebo compatible avec notre environnement de developpement :
-
-
-<h3>Résumé des Combinaisons Compatibles de ROS et Gazebo  ¹ <a class="headerlink" href="#summary-of-compatible-ros-and-gazebo-combinations" title="Link to this heading"></a></h3> 
-<p>This table includes all currently supported versions of ROS and Gazebo. All
-other ROS and Gazebo releases are end of life and we do not recommend their
-continued use.</p>
-<div class="pst-scrollable-table-container"><table class="table">
-<thead>
-<tr class="row-odd"><th class="head"><p></p></th>
-<th class="head"><p><strong>GZ Citadel (LTS)</strong></p></th>
-<th class="head"><p><strong>GZ Fortress (LTS)</strong></p></th>
-<th class="head"><p><strong>GZ Garden</strong></p></th>
-<th class="head"><p><strong>GZ Harmonic (LTS)</strong></p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><strong>ROS 2 Jazzy (LTS)</strong></p></td>
-<td><p>❌</p></td>
-<td><p>❌</p></td>
-<td><p>⚡</p></td>
-<td><p>✅</p></td>
-</tr>
-<tr class="row-odd"><td><p><strong>ROS 2 Rolling</strong></p></td>
-<td><p>❌</p></td>
-<td><p>✅</p></td>
-<td><p>⚡</p></td>
-<td><p>⚡</p></td>
-</tr>
-<tr class="row-even"><td><p><strong>ROS 2 Iron</strong></p></td>
-<td><p>❌</p></td>
-<td><p>✅</p></td>
-<td><p>⚡</p></td>
-<td><p>⚡</p></td>
-</tr>
-<tr class="row-odd"><td><p><strong>ROS 2 Humble (LTS)</strong></p></td>
-<td><p>❌</p></td>
-<td><p>✅</p></td>
-<td><p>⚡</p></td>
-<td><p>⚡</p></td>
-</tr>
-<tr class="row-even"><td><p><strong>ROS 2 Foxy (LTS)</strong></p></td>
-<td><p>✅</p></td>
-<td><p>❌</p></td>
-<td><p>❌</p></td>
-<td><p>❌</p></td>
-</tr>
-<tr class="row-odd"><td><p><strong>ROS 1 Noetic (LTS)</strong></p></td>
-<td><p>✅</p></td>
-<td><p>⚡</p></td>
-<td><p>❌</p></td>
-<td><p>❌</p></td>
-</tr>
-</tbody>
-</table>
-</div>
-<ul class="simple">
-<li><p>✅ - Combinaison recommandée</p></li>
-<li><p>❌ - Incompatible / not possible.</p></li>
-<li><p>⚡ - Possible , <em>mais avec précautions</em>. Ces combinaisons de ROS et Gazebo peuvent fonctionner ensemble, mais nécessitent des ajustements.</p></li>
-</ul>
-
-### Instalation de Gazebo Fortress LTS ²
-
-On doit premierement installer les outils necessaires :
-```bash
-sudo apt-get update
-sudo apt-get install lsb-release gnupg
-```
-Puis on installe notre version de Gazebo :
-
-```bash
-sudo curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/pkgs-osrf-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/gazebo-stable.list > /dev/null
-sudo apt-get update
-sudo apt-get install ignition-fortress
+pip install streamlit
 ```
 
-### Installation de ROS Gazebo Bridge
+### Les élements standard que j'ai utiliser sont :
 
-on doit installer le pont entre Ros et Gazebo :
-```bash
- sudo apt-get install ros-humble-ros-gz
+- text input :
+```python
+name=st.text_input("Name")
+```` 
+- drop down :
+```python
+requester = st.selectbox("Demandeur", ["INNOVATION", "STARTUPS"])
+```` 
+- file uploaer :
+```python
+uploaded_file = st.file_uploader("Importer un fichier STL", type=["stl"])
+```` 
+- number input :
+ ```python
+estimated_time = st.number_input("Temps éstimé (en minutes)", step=10)
+```
+- button :
+```python
+if st.button("Envoyer"):
 ```
 
-### Modification du fichier URDF
-Pour qu'on puisse utiliser notre fichier URDF dans l'environnement gazebo on doit faire quelques modifications ou on ajoute les refernences Gazebo pour chaque __link__ :
+## Le formulaire :
 
-```xml
-<gazebo reference="chassis_link">
-  <material>Gazebo/White</material>
-  <mu1>0.2</mu1>
-  <mu2>0.2</mu2>
-  <selfCollide>true</selfCollide>
-  <gravity>true</gravity>
-</gazebo>
+![image](https://github.com/user-attachments/assets/037b8b0f-dbb3-48bb-9914-49533ba4fdd0)
 
+
+
+___
+
+Pour rendre notre application plus interactive, j'ai ajouter la capacité de prévoir le modèle 3D aprés choisir le fichier et le couleur :
+
+https://github.com/user-attachments/assets/7f47037c-4fac-4264-972e-5d4eb3473e5b
+
+Pour réaliser cette partie on a utliser les bibliothèques __pyvista__ et __stpyvista__ . \
+__Stpyvista__ utilser __pyvista__ pour géenérer des modèles 3d dans l'application __Streamlit__.
+
+> Afficher l'aperçu STL si un fichier et une couleur spécifique sont sélectionnés
+``` python
+if st.session_state.uploaded_file is not None and st.session_state.color != "Quelconque":
+```
+> Creation d'une instance de 3D appartir du fichier uploadé
+``` python
+    stl_plotter = load_stl(st.session_state.uploaded_file, color_dict[st.session_state.color])
+    if stl_plotter is not None:
+        stpyvista(stl_plotter, key="pv_stl_preview")
 ```
 
-Puis on ajoute le plugin __Ackermann Steering__ pour qu'on puisse commander notre vehicule à quatre roues d'une façon realistique
-```xml
-<plugin name='ackermann_drive' filename='libgazebo_ros_ackermann_drive.so'>
+## Gestion de données :
+Pour faciliter la gestion de données et laisser l'option de gestion manuelle on a préféré de choisir un fichier Excel comme notre base de données ou ce trouve la liste des imprimantes et leur état (Disponible / Occupé / Non-Disponible).
+
+On a utiliser __pandas__ et __openpyxl__ pour acceder les fichier excel et les modifier d'une façon fluide
+``` python
+import pandas as pd
+import openpyxl
 ```
-et la partie du commande a partir du nœud teleop twist keyboard :
-
-```xml
-<ros>
-  <namespace>adavia</namespace>
-  <remapping>cmd_vel:=cmd_vel</remapping>
-        <remapping>odom:=odom</remapping>
-  <remapping>distance:=distance</remapping>
-</ros>
+> lire à partir le pdf
+``` python
+pd.read_excel(file, sheet_name=sheet) 
 ```
+> écrire dans le pdf
 
-## Simulation :
-Apres avoir creer un fichier launchg pour executer la simulation sur Gazebo, On a eu un probleme ce qui sera notre centre d'intérêt pour la prochaine journée. Le probleme est ue Gazebo ne trouve pas les fichiers STL décrites dans le fichier URDF
-
-On execute le fichier launch à partie du commande suivante :
-```bash
-ros2 launch adavia gazebo.launch.py
+``` python
+pd.ExcelWriter(excel_file, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer 
 ```
-et on reçoit l'erreur suivant :
-```bash
-[ruby $(which ign) gazebo-1] [GUI] [Err] [SceneManager.cc:404] Failed to load geometry for visual: fr_1_visual
-
-```
-
-![Screenshot from 2024-07-29 16-33-46](https://github.com/user-attachments/assets/d9a003ff-ff33-40c1-a28e-d06373c35344)
-
-
-
-## Sources
-1. [Choix de Gazebo](#[link](https://gazebosim.org/docs/fortress/ros_installation/))
-2. [Docs / Gazebo Fortress](#[link](https://gazebosim.org/docs/fortress/install_ubuntu/)) 
